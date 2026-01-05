@@ -606,11 +606,25 @@ impl eframe::App for App {
     }
 }
 
+#[cfg(windows)]
+fn load_icon() -> IconData {
+    let bytes = include_bytes!("../../../assets/icon.png");
+    match eframe::icon_data::from_png_bytes(bytes) {
+        Ok(v) => v,
+        Err(_) => IconData::default(),
+    }
+}
+
+#[cfg(not(windows))]
+fn load_icon() -> IconData {
+    IconData::default()
+}
+
 fn main() -> eframe::Result {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([1280.0, 720.0])
-            .with_icon(IconData::default()),
+            .with_icon(load_icon()),
         ..Default::default()
     };
 
