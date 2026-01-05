@@ -165,7 +165,7 @@ struct App {
     bigfile_modal: Option<String>,
     error_modal: Option<String>,
     extract_modal: Option<String>,
-    preview_image: (PathBuf, Arc<[u8]>),
+    preview_image: Option<(PathBuf, Arc<[u8]>)>,
 }
 
 impl App {
@@ -218,6 +218,7 @@ impl App {
         self.bfn_path = None;
         self.bfdb_path = None;
         self.bfdata_path = None;
+        self.preview_image = None;
     }
 
     fn add_bigfile(&mut self) {
@@ -516,19 +517,22 @@ impl App {
         }
     }
     fn get_current_preview_file(&mut self, ui: &mut Ui) -> Option<Arc<[u8]>> {
-        if self.preview_image.0 == self.selected[0].path {
-            return Some(self.preview_image.1.clone());
+        if let Some(img) = &self.preview_image
+            && img.0 == self.selected[0].path
+        {
+            return Some(img.1.clone());
         }
+
         if let Some(bigfile) = &self.bigfile
             && let Ok(image) = bigfile.get(&self.selected[0].path)
         {
-            if self.preview_image.0.as_os_str().len() > 0 {
-                let key = format!("bytes://{}", self.preview_image.0.to_string_lossy());
+            if let Some(img) = &self.preview_image {
+                let key = format!("bytes://{}", img.0.to_string_lossy());
                 ui.ctx().forget_image(&key);
             }
 
             let ptr: Arc<[u8]> = image.into();
-            self.preview_image = (self.selected[0].path.clone(), ptr.clone());
+            self.preview_image = Some((self.selected[0].path.clone(), ptr.clone()));
             return Some(ptr);
         }
         None
