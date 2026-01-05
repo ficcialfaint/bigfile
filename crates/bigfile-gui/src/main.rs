@@ -12,6 +12,7 @@ use std::{
     io::{Cursor, Read},
     path::{Path, PathBuf},
     rc::Rc,
+    sync::Arc,
 };
 
 const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -164,6 +165,7 @@ struct App {
     bigfile_modal: Option<String>,
     error_modal: Option<String>,
     extract_modal: Option<String>,
+    preview_image: (PathBuf, Arc<[u8]>),
 }
 
 impl App {
@@ -503,8 +505,7 @@ impl App {
 
     fn display_preview(&mut self, ui: &mut Ui) {
         if !self.selected.is_empty()
-            && let Some(bigfile) = &self.bigfile
-            && let Ok(image) = bigfile.get(&self.selected[0].path)
+            && let Some(image) = self.get_current_preview_file(ui)
         {
             ui.centered_and_justified(|ui| {
                 ui.image(ImageSource::Bytes {
@@ -513,6 +514,24 @@ impl App {
                 })
             });
         }
+    }
+    fn get_current_preview_file(&mut self, ui: &mut Ui) -> Option<Arc<[u8]>> {
+        if self.preview_image.0 == self.selected[0].path {
+            return Some(self.preview_image.1.clone());
+        }
+        if let Some(bigfile) = &self.bigfile
+            && let Ok(image) = bigfile.get(&self.selected[0].path)
+        {
+            if self.preview_image.0.as_os_str().len() > 0 {
+                let key = format!("bytes://{}", self.preview_image.0.to_string_lossy());
+                ui.ctx().forget_image(&key);
+            }
+
+            let ptr: Arc<[u8]> = image.into();
+            self.preview_image = (self.selected[0].path.clone(), ptr.clone());
+            return Some(ptr);
+        }
+        None
     }
 
     fn handle_input(&mut self, ctx: &Context) {
